@@ -41,6 +41,8 @@ namespace :db do
   task :setup => [:create, :provision_defaults, :provision_agent]
   desc 'Upgrade your instance of HashView.'
   task :upgrade
+  desc 'Drop from all tables except users and task'
+  task :reset
 
   # Are the below ever needed beyond our testing?
   #desc 'create and setup schema'
@@ -127,6 +129,29 @@ namespace :db do
     rescue
       raise 'Something went wrong. double check your config/database.yml file and manually test access to mysql.'
     end
+  end
+
+  task :reset do
+    if ENV['RACK_ENV'].nil?
+      ENV['RACK_ENV'] = 'development'
+    end
+    puts "removing all data in the database for environment: #{ENV['RACK_ENV']}"
+    config = YAML.load_file('config/database.yml')
+    config = config[ENV['RACK_ENV']]
+    user, password, host = config['user'], config['password'], config['hostname']
+    database = config['database']
+
+    tables = [ 'customers','hashes','hashfilehashes','hashfiles','jobs','jobtasks','rules','sessions','taskqueues','wordlists' ]
+    tables.each do |table|
+      query = [
+        'mysql', "--user=#{user}", "--password='#{password}'", "--host=#{host}","--database=#{database} -e", "TRUNCATE TABLE #{table}".inspect
+      ]
+      begin
+        system(query.compact.join(' '))
+      rescue
+        raise 'Something went wrong. double check your config/database.yml file and manually test access to mysql.'
+      end
+    end  
   end
 
   task :provision_defaults do
@@ -368,7 +393,7 @@ namespace :db do
     end
 
     # Incase we missed anything
-    #DataMapper.repository.auto_upgrade!
+    DataMapper.repository.auto_upgrade!
     # DataMapper::Model.descendants.each {|m| m.auto_upgrade! if m.superclass == Object}
     #puts 'db:auto:upgrade executed'
   end
@@ -587,7 +612,7 @@ def upgrade_to_v061(user, password, host, database)
 end
 
 def upgrade_to_v070(user, password, host, database)
-  #DataMapper.repository.auto_upgrade!
+  DataMapper.repository.auto_upgrade!
   DataMapper::Model.descendants.each {|m| m.auto_upgrade! if m.superclass == Object}
 
   puts '[*] Upgrading from v0.6.1 to v0.7.0'
@@ -702,7 +727,7 @@ def upgrade_to_v070(user, password, host, database)
 end
 
 def upgrade_to_v071(user, password, host, database)
-  # DataMapper::Model.descendants.each {|m| m.auto_upgrade! if m.superclass == Object}
+  DataMapper::Model.descendants.each {|m| m.auto_upgrade! if m.superclass == Object}
 
   puts '[*] Upgrading from v0.7.0 to v0.7.1'
   conn = Mysql.new host, user, password, database
@@ -711,3 +736,4 @@ def upgrade_to_v071(user, password, host, database)
   conn.query("UPDATE settings SET version = '0.7.1'")
   puts '[+] Upgrade to v0.7.1 complete.'
 end
+
