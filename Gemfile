@@ -3,7 +3,7 @@ ruby '2.2.2'
 
 group :development do
   gem 'rubocop'
-  gem 'factory_girl'
+  gem 'factory_girl', '>= 4.7.0', '>= 4.7.0'
 end
 
 group :test do
@@ -20,7 +20,7 @@ gem 'data_objects'
 gem 'redis'
 gem 'resque'
 gem 'resque-scheduler'
-gem 'resque-web'
+gem 'resque-web', '>= 0.0.9'
 gem 'json'
 gem 'pony'
 gem 'bcrypt'
